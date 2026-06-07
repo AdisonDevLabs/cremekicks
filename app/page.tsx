@@ -79,7 +79,7 @@ export default function Home() {
         {/* Background Image with Slow Zoom */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="/pexels-wedding-maps-130174465-10114295.jpg"
+            src="/pexels-nathanjhilton-9244881.jpg"
             alt="Cinematic Fashion Footwear"
             fill
             priority

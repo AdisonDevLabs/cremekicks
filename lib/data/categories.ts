@@ -13,7 +13,7 @@ export const categories: Category[] = [
     name: "SNEAKERS",
     slug: "sneakers",
     label: "Trending Now",
-    image: "public/New Balance 530 Tech Silver Metallic.png",
+    image: "/New Balance 530 Tech Silver Metallic.png",
     span: "md:col-span-2",
   },
 ];
