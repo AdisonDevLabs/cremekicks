@@ -11,6 +11,9 @@ import { brand } from '@/lib/data/brand';
 import { navSearchSuggestions, navLinksData } from '@/lib/data/categories';
 import { AnnouncementBar } from './AnnouncementBar';
 
+// Apply the same luxury curve used in your animations.ts
+const premiumEasing: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
 export function NavBar() {
   const { cartCount, setIsCartOpen } = useCart();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -40,15 +43,23 @@ export function NavBar() {
     <>
       <AnnouncementBar />
       {/* Desktop Header & Mobile Top Bar */}
-      <header className={`fixed top-10 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'bg-[#0E0E0E]/95 backdrop-blur-md shadow-2xl py-1 border-b border-white/5' : 'bg-transparent py-1 border-b border-white/10'}`}>
+      <header className={`fixed top-10 left-0 right-0 z-50 transition-all duration-500 ${isScrolled ? 'bg-brand-dark/95 backdrop-blur-md shadow-2xl py-1 border-b border-white/5' : 'bg-transparent py-1 border-b border-white/10'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 md:h-[60px]">
             {/* Logo */}
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="font-display tracking-[0.15em] text-white flex flex-col justify-center mt-1 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C6FF00]">
+              <Link href="/" className="font-display tracking-[0.15em] text-white flex flex-col justify-center mt-1 rounded-md focus:outline-none">
                 <span className="text-2xl md:text-3xl font-black uppercase leading-none">
-                  CREME<span className="text-[#C6FF00]">KICKS</span>
+                  {brand.name.split(' ')[0]}
+                  <span className="text-brand-primary">
+                    {brand.name.split(' ').length > 1 ? ' ' + brand.name.split(' ')[1] : ''}
+                  </span>
                 </span>
+                {brand.name.split(' ').length > 2 && (
+                  <span className="hidden md:block text-[8px] tracking-[0.3em] uppercase text-gray-400 mt-1 font-sans">
+                    {brand.name.split(' ').slice(2).join(' ')}
+                  </span>
+                )}
               </Link>
             </div>
 
@@ -58,7 +69,7 @@ export function NavBar() {
                 <Link key={idx} href={link.href} className={`text-[11px] uppercase tracking-widest font-bold ${link.baseTextClass} ${link.hoverTextClass} transition-colors relative group rounded-md px-2 py-1 ${link.isLive ? 'flex items-center' : ''}`}>
                   {link.label}
                   {link.isLive && (
-                    <span className="ml-2 bg-[#FF0000] text-white text-[9px] px-1.5 py-0.5 rounded-sm animate-pulse flex items-center leading-none">LIVE</span>
+                    <span className="ml-2 bg-brand-accent text-white text-[9px] px-1.5 py-0.5 rounded-sm animate-pulse flex items-center leading-none">LIVE</span>
                   )}
                   <span className={`absolute -bottom-1.5 left-2 w-0 h-px transition-all group-hover:w-[calc(100%-16px)] ${link.underlineClass}`}></span>
                 </Link>
@@ -71,34 +82,35 @@ export function NavBar() {
               {/* Search Toggle */}
               <div className="relative hidden sm:block">
                 <button 
-                  className="text-white hover:text-[#C6FF00] transition-colors flex items-center p-2 rounded-md"
+                  className="text-white hover:text-brand-primary transition-colors flex items-center p-2 rounded-md"
                   onClick={() => setIsSearchOpen(!isSearchOpen)}
                 >
                   {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
                 </button>
                 
-                {/* Search Dropdown */}
+                {/* Search Dropdown - Updated ease */}
                 <AnimatePresence>
                   {isSearchOpen && (
                     <motion.div 
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute top-10 right-0 w-72 bg-[#1A1A1A] border border-white/10 rounded-md shadow-2xl p-4 origin-top-right z-50"
+                      transition={{ duration: 0.4, ease: premiumEasing }}
+                      className="absolute top-10 right-0 w-72 bg-brand-card border border-white/10 rounded-md shadow-2xl p-4 origin-top-right z-50"
                     >
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input 
                           type="text" 
                           placeholder="Search products..." 
-                          className="w-full bg-[#0E0E0E] text-white border border-white/5 rounded-md pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-[#C6FF00] transition-colors"
+                          className="w-full bg-brand-dark text-white border border-white/5 rounded-md pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-brand-primary transition-colors"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           autoFocus
                         />
                       </div>
                       <div className="mt-4">
-                        <p className="text-[10px] uppercase tracking-widest text-[#C6FF00] mb-3 font-bold">Suggested</p>
+                        <p className="text-[10px] uppercase tracking-widest text-brand-primary mb-3 font-bold">Suggested</p>
                         <div className="flex flex-wrap gap-2">
                           {navSearchSuggestions.map((suggestion, idx) => (
                             <span key={idx} className="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 cursor-pointer transition-colors text-white rounded-md">
@@ -117,7 +129,7 @@ export function NavBar() {
                 href={`https://wa.me/${brand.whatsappNumber}`} 
                 target="_blank" 
                 rel="noreferrer"
-                className="hidden lg:flex items-center bg-[#C6FF00] text-black px-5 py-2 rounded-md text-xs font-bold uppercase tracking-wide hover:bg-[#A3D900] transition-all hover:scale-105 shadow-[0_0_15px_-3px_rgba(198,255,0,0.4)]"
+                className="hidden lg:flex items-center bg-brand-primary text-black px-5 py-2 rounded-md text-xs font-bold uppercase tracking-wide hover:bg-brand-hover transition-all hover:scale-105 shadow-[0_0_15px_-3px_rgba(0,0,0,0.3)]"
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Order via WhatsApp
@@ -125,17 +137,17 @@ export function NavBar() {
 
                {/* Cart */}
               <button 
-                className="text-white hover:text-[#C6FF00] transition-colors relative group p-2 rounded-md"
+                className="text-white hover:text-brand-primary transition-colors relative group p-2 rounded-md"
                 onClick={() => setIsCartOpen(true)}
               >
                 <motion.div
                   animate={cartPulse ? { scale: [1, 1.2, 1] } : {}}
                   transition={{ duration: 0.3 }}
                 >
-                  <ShoppingBag className="h-6 w-6 group-hover:drop-shadow-[0_0_8px_rgba(198,255,0,0.5)] transition-all" />
+                  <ShoppingBag className="h-6 w-6 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all" />
                 </motion.div>
                 {cartCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-[#FF6B00] text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-[#0E0E0E]">
+                  <span className="absolute top-0 right-0 bg-brand-accent text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center border border-brand-dark">
                     {cartCount}
                   </span>
                 )}
@@ -152,7 +164,7 @@ export function NavBar() {
       </header>
 
       {/* Mobile Bottom Navigation Hub (Simplified to 4 elements to fix fat-finger issues) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0A0A0A]/95 backdrop-blur-lg border-t border-white/5 px-6 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-[55]">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-brand-card/95 backdrop-blur-lg border-t border-white/5 px-6 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-[55]">
         <div className="flex justify-between items-center mb-1 max-w-sm mx-auto">
           <Link href="/" className="flex flex-col items-center space-y-1 text-gray-400 hover:text-white transition-colors w-16 p-1 rounded-md">
             <Home className="h-5 w-5" />
@@ -167,20 +179,20 @@ export function NavBar() {
           <div className="relative -top-6">
             <button 
               onClick={() => setIsCartOpen(true)}
-              className="bg-[#C6FF00] text-black p-3 rounded-full flex flex-col items-center justify-center h-14 w-14 border-[3px] border-[#0A0A0A] shadow-lg focus:outline-none"
+              className="bg-brand-primary text-black p-3 rounded-full flex flex-col items-center justify-center h-14 w-14 border-[3px] border-brand-card shadow-lg focus:outline-none"
             >
               <motion.div animate={cartPulse ? { scale: [1, 1.2, 1] } : {}} transition={{ duration: 0.3 }}>
                 <ShoppingBag className="h-5 w-5" />
               </motion.div>
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#FF6B00] text-white text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-[#0A0A0A]">
+                <span className="absolute -top-1 -right-1 bg-brand-accent text-white text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-brand-card">
                   {cartCount}
                 </span>
               )}
             </button>
           </div>
           
-          <a href={`https://wa.me/${brand.whatsappNumber}`} target="_blank" rel="noreferrer" className="flex flex-col items-center space-y-1 text-gray-400 hover:text-[#C6FF00] transition-colors w-16 p-1 rounded-md">
+          <a href={`https://wa.me/${brand.whatsappNumber}`} target="_blank" rel="noreferrer" className="flex flex-col items-center space-y-1 text-gray-400 hover:text-brand-primary transition-colors w-16 p-1 rounded-md">
             <MessageCircle className="w-5 h-5" />
             <span className="text-[9px] font-bold tracking-wide uppercase text-center w-full">Order</span>
           </a>

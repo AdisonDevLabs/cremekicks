@@ -13,6 +13,7 @@ import { brand } from '@/lib/data/brand';
 import { colorMap, sizeGuideData } from '@/lib/data/products';
 import { useCart } from '@/lib/CartContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { fadeUp, staggerContainer, staggerItem } from '@/lib/animations';
 
 export default function ProductDetails() {
   const params = useParams();
@@ -36,8 +37,8 @@ export default function ProductDetails() {
   
   const { addToCart, setIsCartOpen } = useCart();
   
-  const [selectedSize, setSelectedSize] = useState<string>(product?.sizes[0] || '');
-  const [selectedColor, setSelectedColor] = useState<string>(product?.colors[0] || '');
+  const [selectedSize, setSelectedSize] = useState<string>(product?.sizes?.[0] || '');
+  const [selectedColor, setSelectedColor] = useState<string>(product?.colors?.[0] || '');
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
@@ -48,7 +49,11 @@ export default function ProductDetails() {
   useEffect(() => {
     window.scrollTo(0, 0);
     setActiveImage(0); 
-  }, [id]);
+    if (product) {
+       setSelectedSize(product.sizes?.[0] || '');
+       setSelectedColor(product.colors?.[0] || '');
+    }
+  }, [id, product]);
 
   // Handle Sticky Mobile CTA Visibility
   useEffect(() => {
@@ -62,18 +67,73 @@ export default function ProductDetails() {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-[#0E0E0E] text-white pt-[120px]">
+      <motion.div 
+        initial="hidden" animate="visible" variants={fadeUp}
+        className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-brand-dark text-white pt-[120px]"
+      >
         <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
           <SearchX className="h-8 w-8 text-gray-400" />
         </div>
         <h2 className="font-display text-3xl md:text-4xl uppercase tracking-wide mb-3">Product Not Found</h2>
         <p className="text-gray-400 max-w-md mx-auto mb-10 text-sm md:text-base">This product might be out of stock or the link might be broken.</p>
-        <button onClick={() => router.push('/shop')} className="inline-flex h-14 px-8 bg-white text-black font-bold uppercase tracking-widest hover:bg-[#C6FF00] transition-colors items-center justify-center rounded-md">
+        <button onClick={() => router.push('/shop')} className="inline-flex h-14 px-8 bg-white text-black font-bold uppercase tracking-widest hover:bg-brand-primary transition-colors items-center justify-center rounded-md">
           Back to Shop
         </button>
-      </div>
+      </motion.div>
     );
   }
+
+  const images = product.images && product.images.length > 0 
+  ? product.images 
+  : [product.image];
+
+  const handleColorSelect = (color: string) => {
+    setSelectedColor(color);
+    if (images.length <= 1) return;
+    
+    const colorLower = color.toLowerCase();
+    
+    // 1. Direct match by parsing color string to find image match
+    let matchedIdx = images.findIndex(img => {
+      const imgName = img.toLowerCase();
+      return imgName.includes(colorLower) || 
+             colorLower.split(' ').some(term => term.length > 1 && imgName.includes(term));
+    });
+    
+    // 2. Fallback to index mapping if array lengths correspond
+    if (matchedIdx === -1 && product.colors) {
+      const cIdx = product.colors.indexOf(color);
+      if (cIdx >= 0 && cIdx < images.length) {
+        matchedIdx = cIdx;
+      }
+    }
+    
+    if (matchedIdx !== -1) {
+      setActiveImage(matchedIdx);
+    }
+  };
+
+  const handleImageSelect = (idx: number) => {
+    setActiveImage(idx);
+    if (!product.colors || product.colors.length <= 1) return;
+    
+    const imgName = images[idx].toLowerCase();
+    
+    // Reverse mapping image to color state
+    let matchedColor = product.colors.find(c => {
+       const cLower = c.toLowerCase();
+       return imgName.includes(cLower) ||
+              cLower.split(' ').some(term => term.length > 1 && imgName.includes(term));
+    });
+    
+    if (!matchedColor && idx < product.colors.length) {
+       matchedColor = product.colors[idx];
+    }
+    
+    if (matchedColor) {
+       setSelectedColor(matchedColor);
+    }
+  };
 
   const triggerSizeError = () => {
     setSizeError(true);
@@ -82,7 +142,7 @@ export default function ProductDetails() {
   };
 
   const handleAddToCart = () => {
-    if (!selectedSize) return triggerSizeError();
+    if (!selectedSize && product.sizes && product.sizes.length > 0) return triggerSizeError();
     addToCart(product, selectedSize, selectedColor, quantity);
     setShowAddedToast(true);
     setTimeout(() => {
@@ -91,19 +151,15 @@ export default function ProductDetails() {
   };
   
   const handleWhatsAppCheckout = () => {
-    if (!selectedSize) return triggerSizeError();
-    const message = `Hello Creme Kicks,\n\nI'd like to order:\n\n• Product: ${product.name}\n${selectedSize ? `• Size: ${selectedSize}\n` : ''}${selectedColor ? `• Color: ${selectedColor}\n` : ''}• Quantity: ${quantity}\n\nPlease confirm availability and delivery details.\n\nThank you.`;
+    if (!selectedSize && product.sizes && product.sizes.length > 0) return triggerSizeError();
+    const message = `Hello ${brand.name},\n\nI'd like to order:\n\n• Product: ${product.name}\n${selectedSize ? `• Size/Option: ${selectedSize}\n` : ''}${selectedColor ? `• Color: ${selectedColor}\n` : ''}• Quantity: ${quantity}\n\nPlease confirm availability and delivery details.\n\nThank you.`;
     
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/${brand.whatsappNumber}?text=${encodedMessage}`, '_blank');
   };
 
-  const images = product.images && product.images.length > 0 
-  ? product.images 
-  : [product.image];
-
   return (
-    <div className="bg-[#0E0E0E] text-white min-h-screen relative pb-20 md:pb-0">
+    <div className="bg-brand-dark text-white min-h-screen relative pb-20 md:pb-0">
       {/* Mini Cart Notification Toast - Moved to top right to avoid blocking view */}
       <AnimatePresence>
         {showAddedToast && (
@@ -111,9 +167,9 @@ export default function ProductDetails() {
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-24 right-4 md:right-8 z-[100] bg-[#111] border border-[#C6FF00]/50 shadow-[0_10px_40px_rgba(198,255,0,0.1)] p-4 flex flex-col sm:flex-row items-center gap-4 min-w-[320px] rounded-md"
+            className="fixed top-24 right-4 md:right-8 z-[100] bg-brand-card border border-brand-primary/50 shadow-[0_10px_40px_rgba(0,0,0,0.3)] p-4 flex flex-col sm:flex-row items-center gap-4 min-w-[320px] rounded-md"
           >
-            <div className="flex items-center text-[#C6FF00]">
+            <div className="flex items-center text-brand-primary">
                <CheckCircle className="h-5 w-5 mr-3" />
                <span className="font-bold text-sm uppercase tracking-widest text-white">Added to Cart</span>
             </div>
@@ -122,7 +178,7 @@ export default function ProductDetails() {
                  Continue Shopping
                </button>
                <div className="w-px h-4 bg-white/20 hidden sm:block"></div>
-               <button onClick={() => { setShowAddedToast(false); setIsCartOpen(true); }} className="text-xs text-[#C6FF00] hover:text-white uppercase tracking-widest font-bold flex-1 sm:flex-none text-center">
+               <button onClick={() => { setShowAddedToast(false); setIsCartOpen(true); }} className="text-xs text-brand-primary hover:text-white uppercase tracking-widest font-bold flex-1 sm:flex-none text-center">
                  View Cart
                </button>
             </div>
@@ -134,7 +190,10 @@ export default function ProductDetails() {
       </AnimatePresence>
 
       {/* Breadcrumbs (Desktop) */}
-      <div className="bg-[#111] py-4 px-6 border-b border-white/10 hidden md:block">
+      <motion.div 
+        initial="hidden" animate="visible" variants={fadeUp}
+        className="bg-brand-card py-4 px-6 border-b border-white/10 hidden md:block"
+      >
         <div className="max-w-7xl mx-auto flex items-center text-xs font-bold uppercase tracking-widest text-gray-500">
           <Link href="/" className="hover:text-white transition-colors">Home</Link>
           <span className="mx-2 text-white/20">/</span>
@@ -142,30 +201,36 @@ export default function ProductDetails() {
           <span className="mx-2 text-white/20">/</span>
           <Link href={`/shop?category=${product.category.toLowerCase()}`} className="hover:text-white transition-colors">{product.category}</Link>
           <span className="mx-2 text-white/20">/</span>
-          <span className="text-[#C6FF00] truncate">{product.name}</span>
+          <span className="text-brand-primary truncate">{product.name}</span>
         </div>
-      </div>
+      </motion.div>
 
       {/* Mobile Back Button - Changed to scroll normally with page rather than obscuring content */}
-      <div className="md:hidden w-full bg-[#111] border-b border-white/10 px-4 py-3">
+      <motion.div 
+        initial="hidden" animate="visible" variants={fadeUp}
+        className="md:hidden w-full bg-brand-card border-b border-white/10 px-4 py-3"
+      >
         <button onClick={() => router.back()} className="flex items-center text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back To Shop
         </button>
-      </div>
+      </motion.div>
 
       <div className="pt-6 md:pt-12">
         <div className="max-w-7xl mx-auto px-0 md:px-6 md:pb-12">
           <div className="flex flex-col md:flex-row gap-0 md:gap-12 lg:gap-16">
             
             {/* Image Gallery */}
-            <div className="md:w-1/2 md:sticky md:top-24 h-fit z-10">
-              <div className="relative aspect-[3/4] md:aspect-[4/5] w-full max-h-[calc(100vh-200px)] bg-[#111] overflow-hidden border-b md:border border-white/10 group md:rounded-md">
+            <motion.div 
+              initial="hidden" animate="visible" variants={fadeUp}
+              className="md:w-1/2 md:sticky md:top-24 h-fit z-10"
+            >
+              <div className="relative aspect-[3/4] md:aspect-[4/5] w-full max-h-[calc(100vh-200px)] bg-brand-card overflow-hidden border-b md:border border-white/10 group md:rounded-md">
                 {product.isFlashDeal ? (
-                  <div className="absolute top-4 left-4 z-20 bg-[#FF6B00] text-white text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest shadow-xl rounded-md">Sale</div>
+                  <div className="absolute top-4 left-4 z-20 bg-brand-accent text-white text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest shadow-xl rounded-md">Sale</div>
                 ) : product.isNewArrival ? (
                   <div className="absolute top-4 left-4 z-20 bg-white text-black text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest shadow-xl rounded-md">New Arrival</div>
                 ) : product.isBestSeller ? (
-                  <div className="absolute top-4 left-4 z-20 bg-[#C6FF00] text-black text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest shadow-xl rounded-md">Best Seller</div>
+                  <div className="absolute top-4 left-4 z-20 bg-brand-primary text-black text-[10px] font-bold px-3 py-1.5 uppercase tracking-widest shadow-xl rounded-md">Best Seller</div>
                 ) : null}
                 
                 <AnimatePresence mode="wait">
@@ -193,8 +258,8 @@ export default function ProductDetails() {
                   {images.map((_, idx) => (
                     <button 
                       key={idx} 
-                      onClick={() => setActiveImage(idx)}
-                      className={`h-2 rounded-full transition-all ${activeImage === idx ? 'bg-[#C6FF00] w-6' : 'bg-white/50 w-2'}`}
+                      onClick={() => handleImageSelect(idx)}
+                      className={`h-2 rounded-full transition-all ${activeImage === idx ? 'bg-brand-primary w-6' : 'bg-white/50 w-2'}`}
                     />
                   ))}
                 </div>
@@ -205,25 +270,28 @@ export default function ProductDetails() {
                 {images.map((img, idx) => (
                   <button 
                     key={idx} 
-                    onClick={() => setActiveImage(idx)}
-                    className={`relative w-24 aspect-square flex-shrink-0 bg-[#111] border rounded-md overflow-hidden transition-all ${activeImage === idx ? 'border-[#C6FF00] opacity-100' : 'border-white/10 opacity-50 hover:opacity-100'}`}
+                    onClick={() => handleImageSelect(idx)}
+                    className={`relative w-24 aspect-square flex-shrink-0 bg-brand-card border rounded-md overflow-hidden transition-all ${activeImage === idx ? 'border-brand-primary opacity-100' : 'border-white/10 opacity-50 hover:opacity-100'}`}
                   >
                     <Image src={img} alt={`Thumbnail ${idx + 1}`} fill referrerPolicy="no-referrer" className="object-cover" />
                   </button>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
             {/* Product Info Panel */}
-            <div className="md:w-1/2 p-6 md:p-0 flex flex-col z-0">
+            <motion.div 
+              initial="hidden" animate="visible" variants={staggerContainer}
+              className="md:w-1/2 p-6 md:p-0 flex flex-col z-0"
+            >
               {/* Header info */}
-              <div className="mb-8 mt-2 md:mt-0">
+              <motion.div variants={staggerItem} className="mb-8 mt-2 md:mt-0">
                 <h1 className="font-display uppercase tracking-wide text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-white leading-[1.1] mb-4">
                   {product.name}
                 </h1>
                 
                 <div className="flex flex-wrap items-center gap-4 mb-6">
-                  <div className="flex items-center text-[#C6FF00]">
+                  <div className="flex items-center text-brand-primary">
                     {[1,2,3,4,5].map((s) => (
                       <Star key={s} className={`h-4 w-4 ${s <= (product.rating || 5) ? 'fill-current' : 'text-gray-600'}`} />
                     ))}
@@ -234,7 +302,7 @@ export default function ProductDetails() {
                     {product.reviews || '120'} Reviews
                   </Link>
                   <div className="w-1 h-1 rounded-full bg-white/20"></div>
-                  <span className="text-xs font-bold uppercase tracking-widest text-[#C6FF00] flex items-center">
+                  <span className="text-xs font-bold uppercase tracking-widest text-brand-primary flex items-center">
                     <CheckCircle className="w-3 h-3 mr-1" /> In Stock
                   </span>
                 </div>
@@ -245,29 +313,29 @@ export default function ProductDetails() {
                     <span className="text-lg sm:text-xl text-gray-500 line-through mb-1.5">{formatPrice(product.originalPrice)}</span>
                   )}
                   {product.originalPrice && (
-                    <span className="ml-2 bg-[#FF6B00]/10 text-[#FF6B00] rounded-md text-[10px] font-bold px-2 py-1 uppercase tracking-widest mb-2 border border-[#FF6B00]/20 hidden sm:block">
+                    <span className="ml-2 bg-brand-accent/10 text-brand-accent rounded-md text-[10px] font-bold px-2 py-1 uppercase tracking-widest mb-2 border border-brand-accent/20 hidden sm:block">
                       Save {Math.round((1 - product.price / product.originalPrice!) * 100)}%
                     </span>
                   )}
                 </div>
-              </div>
+              </motion.div>
 
               {/* Size & Color Selection */}
-              <div className="space-y-8 mb-10 py-8 border-y border-white/10">
+              <motion.div variants={staggerItem} className="space-y-8 mb-10 py-8 border-y border-white/10">
                 
                 {/* Color Selection */}
                 {product.colors && product.colors.length > 0 && (
                   <div>
-                    <span className="font-bold text-white uppercase tracking-widest text-xs block mb-4">Color: <span className="font-medium text-[#C6FF00] ml-1">{selectedColor || 'Select'}</span></span>
+                    <span className="font-bold text-white uppercase tracking-widest text-xs block mb-4">Color: <span className="font-medium text-brand-primary ml-1">{selectedColor || 'Select'}</span></span>
                     <div className="flex flex-wrap gap-4">
                       {product.colors.map((color) => {
                         const hexColor = colorMap[color] || '#333';
                         return (
                           <button
                             key={color}
-                            onClick={() => setSelectedColor(color)}
+                            onClick={() => handleColorSelect(color)}
                             className={`relative w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${
-                              selectedColor === color ? 'border-[#C6FF00] scale-110' : 'border-white/10 hover:border-white/50'
+                              selectedColor === color ? 'border-brand-primary scale-110' : 'border-white/10 hover:border-white/50'
                             }`}
                             aria-label={`Select Color: ${color}`}
                           >
@@ -287,7 +355,7 @@ export default function ProductDetails() {
                   >
                     <div className="flex justify-between items-center mb-4">
                       <span className="font-bold text-white uppercase tracking-widest text-xs flex items-center">
-                        Size (EU) 
+                        Size / Option 
                         {sizeError && <span className="text-red-500 ml-3 animate-pulse">Required *</span>}
                       </span>
                       <button 
@@ -304,7 +372,7 @@ export default function ProductDetails() {
                           onClick={() => { setSelectedSize(size); setSizeError(false); }}
                           className={`h-12 flex-1 min-w-[64px] rounded-md font-bold text-sm transition-all border ${
                             selectedSize === size
-                              ? 'bg-[#C6FF00] text-black border-[#C6FF00]'
+                              ? 'bg-brand-primary text-black border-brand-primary'
                               : sizeError
                                 ? 'bg-transparent border-red-500/50 text-white hover:border-white'
                                 : 'bg-transparent border-white/20 text-white hover:border-white'
@@ -316,14 +384,14 @@ export default function ProductDetails() {
                     </div>
                   </div>
                 )}
-              </div>
+              </motion.div>
 
               {/* Primary Purchase Section */}
-              <div className="flex flex-col gap-4 mb-8">
+              <motion.div variants={staggerItem} className="flex flex-col gap-4 mb-8">
                 {/* Quantity Selector */}
                 <div className="mb-2">
                   <span className="font-bold text-white uppercase tracking-widest text-xs block mb-3">Quantity</span>
-                  <div className="inline-flex items-center border border-white/20 bg-[#111] rounded-md overflow-hidden">
+                  <div className="inline-flex items-center border border-white/20 bg-brand-card rounded-md overflow-hidden">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
                       className="w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
@@ -342,7 +410,7 @@ export default function ProductDetails() {
 
                 <button 
                   onClick={handleAddToCart}
-                  className="w-full h-16 sm:h-20 bg-[#C6FF00] text-black font-bold uppercase tracking-widest text-sm sm:text-base flex items-center justify-center hover:bg-white transition-colors shadow-[0_0_20px_-5px_rgba(198,255,0,0.3)] rounded-md"
+                  className="w-full h-16 sm:h-20 bg-brand-primary text-black font-bold uppercase tracking-widest text-sm sm:text-base flex items-center justify-center hover:bg-brand-hover transition-colors shadow-[0_0_20px_-5px_rgba(0,0,0,0.3)] rounded-md"
                 >
                   <ShoppingBag className="h-5 w-5 mr-3" />
                   ADD TO CART
@@ -350,14 +418,14 @@ export default function ProductDetails() {
                 
                 <button 
                   onClick={handleWhatsAppCheckout}
-                  className="w-full h-14 bg-transparent border border-[#C6FF00] text-[#C6FF00] font-bold uppercase tracking-widest text-xs flex items-center justify-center hover:bg-[#C6FF00] hover:text-black transition-colors rounded-md"
+                  className="w-full h-14 bg-transparent border border-brand-primary text-brand-primary font-bold uppercase tracking-widest text-xs flex items-center justify-center hover:bg-brand-primary hover:text-black transition-colors rounded-md"
                 >
                   <MessageCircle className="h-4 w-4 mr-2" /> ORDER ON WHATSAPP
                 </button>
-              </div>
+              </motion.div>
 
               {/* Delivery & Trust Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#111] p-6 border border-white/5 mb-12 rounded-md">
+              <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-brand-card p-6 border border-white/5 mb-12 rounded-md">
                 <div className="flex items-start">
                   <Truck className="h-5 w-5 mr-3 text-gray-400 shrink-0" />
                   <div>
@@ -386,40 +454,43 @@ export default function ProductDetails() {
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest">Direct help from our team</p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Structured Product Description */}
-              <div className="space-y-10">
+              <motion.div variants={staggerItem} className="space-y-10">
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-widest text-white mb-4 border-b border-white/10 pb-2">Overview</h3>
                   <p className="text-gray-400 leading-relaxed font-light text-sm">
-                    {product.description} Perfect for office wear, formal events, and everyday elegance. Designed for comfort and long-lasting wear, adapting seamlessly to your personal style.
+                    {product.description} Designed for comfort and long-lasting wear, adapting seamlessly to your personal style.
                   </p>
                 </div>
 
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-widest text-white mb-4 border-b border-white/10 pb-2">Features</h3>
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-2 text-sm text-gray-400 font-light">
-                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-[#C6FF00]" /> Premium Material</li>
-                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-[#C6FF00]" /> Comfort Fit Insoles</li>
-                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-[#C6FF00]" /> Lightweight Design</li>
-                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-[#C6FF00]" /> Durable Sole Construction</li>
-                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-[#C6FF00]" /> Easy to Style</li>
+                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-brand-primary" /> Premium Material</li>
+                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-brand-primary" /> Comfort Fit Design</li>
+                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-brand-primary" /> Lightweight Construction</li>
+                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-brand-primary" /> Durable Finish</li>
+                    <li className="flex items-center"><CheckCircle className="w-4 h-4 mr-2 text-brand-primary" /> Easy to Style</li>
                   </ul>
                 </div>
-              </div>
+              </motion.div>
               
-            </div>
+            </motion.div>
           </div>
         </div>
 
         {/* Customer Reviews Section */}
-        <section id="reviews" className="border-t border-white/10 bg-[#0A0A0A] py-20 px-6">
+        <section id="reviews" className="border-t border-white/10 bg-brand-dark py-20 px-6">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12">
+            <motion.div 
+              initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={fadeUp}
+              className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12"
+            >
               <div>
                 <h2 className="font-display uppercase tracking-wide text-3xl md:text-5xl text-white mb-4">Why Customers Love It</h2>
-                <div className="flex items-center text-[#C6FF00]">
+                <div className="flex items-center text-brand-primary">
                   {[1,2,3,4,5].map((s) => (
                     <Star key={s} className="h-5 w-5 fill-current" />
                   ))}
@@ -429,11 +500,15 @@ export default function ProductDetails() {
               <button className="mt-6 md:mt-0 px-8 py-4 bg-transparent border border-white text-white rounded-md font-bold uppercase tracking-widest text-xs hover:bg-white hover:text-black transition-colors">
                 Write a Review
               </button>
-            </div>
+            </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {productReviews.map((review) => (
-                <div key={review.id} className="bg-[#111] p-6 border border-white/5 flex flex-col rounded-md">
+                <motion.div 
+                  initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={fadeUp}
+                  key={review.id} 
+                  className="bg-brand-card p-6 border border-white/5 flex flex-col rounded-md"
+                >
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h4 className="text-white font-bold tracking-widest uppercase text-sm">{review.name}</h4>
@@ -442,7 +517,7 @@ export default function ProductDetails() {
                     <div className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{review.date}</div>
                   </div>
                   
-                  <div className="flex mb-4 text-[#C6FF00]">
+                  <div className="flex mb-4 text-brand-primary">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className={`h-3 w-3 ${i < review.rating ? 'fill-current' : 'text-gray-700'}`} />
                     ))}
@@ -454,11 +529,11 @@ export default function ProductDetails() {
                   </p>
                   
                   {review.purchased && (
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#C6FF00] flex items-center">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-brand-primary flex items-center">
                       <CheckCircle className="w-3 h-3 mr-1" /> Verified Buyer
                     </div>
                   )}
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -466,28 +541,38 @@ export default function ProductDetails() {
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
-          <section className="py-20 bg-[#111] border-t border-white/10 px-6">
+          <section className="py-20 bg-brand-card border-t border-white/10 px-6">
             <div className="max-w-7xl mx-auto">
-              <h2 className="font-display uppercase tracking-wide text-3xl md:text-5xl text-center mb-12 text-white">Complete The Look</h2>
+              <motion.h2 
+                initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={fadeUp}
+                className="font-display uppercase tracking-wide text-3xl md:text-5xl text-center mb-12 text-white"
+              >
+                Complete The Look
+              </motion.h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {relatedProducts.map(prod => (
-                  <Link href={`/product/${prod.id}`} key={prod.id} className="group flex flex-col hover:-translate-y-1 transition-transform duration-300">
-                    <div className="relative aspect-[3/4] w-full bg-[#0A0A0A] overflow-hidden rounded-md mb-4 border border-transparent group-hover:border-white/10">
-                      <Image
-                        src={prod.image}
-                        alt={prod.name}
-                        fill
-                        referrerPolicy="no-referrer"
-                        className="object-cover group-hover:scale-[1.03] opacity-90 group-hover:opacity-100 transition-transform duration-700"
-                      />
-                    </div>
-                    <div className="text-left w-full mt-auto">
-                      <h3 className="font-sans font-medium text-white line-clamp-2 mb-1 group-hover:text-[#C6FF00] transition-colors text-sm sm:text-base leading-tight">
-                        {prod.name}
-                      </h3>
-                      <div className="font-sans font-medium text-white text-sm">{formatPrice(prod.price)}</div>
-                    </div>
-                  </Link>
+                  <motion.div 
+                    initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={fadeUp}
+                    key={prod.id}
+                  >
+                    <Link href={`/product/${prod.id}`} className="group flex flex-col hover:-translate-y-1 transition-transform duration-300">
+                      <div className="relative aspect-[3/4] w-full bg-brand-dark overflow-hidden rounded-md mb-4 border border-transparent group-hover:border-white/10">
+                        <Image
+                          src={prod.image}
+                          alt={prod.name}
+                          fill
+                          referrerPolicy="no-referrer"
+                          className="object-cover group-hover:scale-[1.03] opacity-90 group-hover:opacity-100 transition-transform duration-700"
+                        />
+                      </div>
+                      <div className="text-left w-full mt-auto">
+                        <h3 className="font-sans font-medium text-white line-clamp-2 mb-1 group-hover:text-brand-primary transition-colors text-sm sm:text-base leading-tight">
+                          {prod.name}
+                        </h3>
+                        <div className="font-sans font-medium text-white text-sm">{formatPrice(prod.price)}</div>
+                      </div>
+                    </Link>
+                  </motion.div>
                 ))}
               </div>
             </div>
@@ -495,49 +580,30 @@ export default function ProductDetails() {
         )}
 
         {/* Recently Viewed */}
-        <section className="py-20 bg-[#0A0A0A] border-t border-white/10 px-6">
+        <section className="py-20 bg-brand-dark border-t border-white/10 px-6">
           <div className="max-w-7xl mx-auto">
-            <h2 className="text-xs uppercase font-bold tracking-[0.2em] text-gray-500 mb-8 border-b border-white/10 pb-4">Recently Viewed</h2>
+            <motion.h2 
+              initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={fadeUp}
+              className="text-xs uppercase font-bold tracking-[0.2em] text-gray-500 mb-8 border-b border-white/10 pb-4"
+            >
+              Recently Viewed
+            </motion.h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4">
                 {recentlyViewed.map(prod => (
-                  <Link href={`/product/${prod.id}`} key={prod.id} className="group">
-                    <div className="relative aspect-square w-full bg-[#111] rounded-md overflow-hidden border border-white/5 group-hover:border-white/20 transition-colors">
-                      <Image src={prod.image} alt={prod.name} fill className="object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  </Link>
+                  <motion.div 
+                    initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={fadeUp}
+                    key={prod.id}
+                  >
+                    <Link href={`/product/${prod.id}`} className="group">
+                      <div className="relative aspect-square w-full bg-brand-card rounded-md overflow-hidden border border-white/5 group-hover:border-white/20 transition-colors">
+                        <Image src={prod.image} alt={prod.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                      </div>
+                    </Link>
+                  </motion.div>
                 ))}
             </div>
           </div>
         </section>
-
-        {/* Mobile Sticky CTA 
-        <AnimatePresence>
-          {isStickyVisible && (
-            <motion.div 
-              initial={{ y: 100 }}
-              animate={{ y: 0 }}
-              exit={{ y: 100 }}
-              className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0A0A0A]/95 backdrop-blur-md border-t border-white/10 p-4 pb-safe z-50 flex items-center gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]"
-            >
-              <button 
-                onClick={handleAddToCart}
-                className="flex-1 h-14 bg-[#C6FF00] text-black rounded-md font-bold uppercase tracking-widest flex items-center justify-center text-sm shadow-[0_0_20px_-5px_rgba(198,255,0,0.4)]"
-              >
-                <ShoppingBag className="w-5 h-5 mr-2" /> Add To Cart
-              </button>
-              
-              <button 
-                onClick={handleWhatsAppCheckout}
-                className="w-14 h-14 shrink-0 bg-transparent border border-[#C6FF00] text-[#C6FF00] rounded-md font-bold flex items-center justify-center text-sm hover:bg-[#C6FF00] hover:text-black transition-colors"
-                aria-label="Order on WhatsApp"
-              >
-                <MessageCircle className="w-6 h-6" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        */}
 
         {/* Size Guide Modal */}
         <AnimatePresence>
@@ -554,9 +620,9 @@ export default function ProductDetails() {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-lg bg-[#111] border border-white/10 shadow-2xl overflow-hidden rounded-md z-10"
+                className="relative w-full max-w-lg bg-brand-card border border-white/10 shadow-2xl overflow-hidden rounded-md z-10"
               >
-                <div className="flex justify-between items-center p-6 border-b border-white/10 bg-[#0a0a0a]">
+                <div className="flex justify-between items-center p-6 border-b border-white/10 bg-brand-dark">
                   <h3 className="font-display text-2xl uppercase tracking-wide text-white">Size Guide</h3>
                   <button
                     onClick={() => setShowSizeGuide(false)}
@@ -567,7 +633,7 @@ export default function ProductDetails() {
                 </div>
                 <div className="p-6">
                   <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-                    Our sneakers generally runs true to size. If you are between sizes, we recommend ordering a size up.
+                    Our products generally run true to size. If you are between sizes, we recommend ordering a size up.
                   </p>
                   
                   <div className="overflow-x-auto print:overflow-visible rounded-md border border-white/10">
@@ -583,7 +649,7 @@ export default function ProductDetails() {
                       <tbody className="divide-y divide-white/5">
                         {sizeGuideData.map((row) => (
                           <tr key={row.eu} className="hover:bg-white/5 transition-colors text-gray-300">
-                            <td className="px-4 py-3 font-bold text-[#C6FF00]">{row.eu}</td>
+                            <td className="px-4 py-3 font-bold text-brand-primary">{row.eu}</td>
                             <td className="px-4 py-3">{row.uk}</td>
                             <td className="px-4 py-3">{row.us}</td>
                             <td className="px-4 py-3">{row.cm}</td>
@@ -593,12 +659,12 @@ export default function ProductDetails() {
                     </table>
                   </div>
                   
-                  <div className="mt-8 bg-[#C6FF00]/10 border border-[#C6FF00]/20 p-4 flex items-start gap-4 rounded-md">
-                    <MessageCircle className="w-6 h-6 text-[#C6FF00] shrink-0" />
+                  <div className="mt-8 bg-brand-primary/10 border border-brand-primary/20 p-4 flex items-start gap-4 rounded-md">
+                    <MessageCircle className="w-6 h-6 text-brand-primary shrink-0" />
                     <div>
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-[#C6FF00] mb-1">Still Unsure?</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-brand-primary mb-1">Still Unsure?</h4>
                       <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-3 leading-relaxed">Send us a message and we&apos;ll help you find your perfect fit.</p>
-                      <a href={`https://wa.me/${brand.whatsappNumber}?text=I%20need%20help%20with%20sizing!`} target="_blank" rel="noreferrer" className="text-xs font-bold text-white hover:text-[#C6FF00] underline underline-offset-4 uppercase tracking-widest">Chat on WhatsApp</a>
+                      <a href={`https://wa.me/${brand.whatsappNumber}?text=${encodeURIComponent("I need help with sizing/options!")}`} target="_blank" rel="noreferrer" className="text-xs font-bold text-white hover:text-brand-primary underline underline-offset-4 uppercase tracking-widest">Chat on WhatsApp</a>
                     </div>
                   </div>
                 </div>
