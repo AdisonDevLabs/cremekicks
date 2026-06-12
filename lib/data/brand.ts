@@ -3,17 +3,69 @@ import { Truck, MessageCircle, Star, Sparkles, Tag, CheckCircle, ShieldCheck } f
 
 export const brand = {
   name: "Creme Kicks",
+  shortName: "CK",
+  logo: "/pexels-nathanjhilton-9244881.jpg",
   tagline: "Step into Confidence",
   description:
     "Stylish, affordable, and high-quality women's footwear designed for everyday elegance.",
-    seo: {
+  location: "Kenyatta Avenue, Opposite Equity Bank, Lams Business Mall, Shop 22 & 25, Nakuru",
+  seo: {
     title: "Creme Kicks",
     description: "Premium thrift fashion.",
+  },
+  hero: {
+    badge: "110K+ Followers on TikTok ✨",
+    headlineTop: "STEP OUT IN",
+    headlineHighlight: "GLAMOUR",
+    backgroundImage: "/Wave Athletic Training Shoe.png", // BEN★BU Platform Canvas Sneakers
+    ctaPrimary: "Order on WhatsApp",
+    ctaSecondary: "Shop Collection",
+  },
+  sections: {
+    featured: {
+      title: "Featured Collections",
+      subtitle: "Find your perfect pair. Browse through elegant ladies' slides, urban kids' wear, and classic canvas kicks."
+    },
+    flashDeals: {
+      badge: "Live Offers",
+      title: "Flash Deals",
+      subtitle: "Grab customer favorites like our Wetlook School Shoes at unbeatable prices before stocks run out.",
+      cta: "View All Deals"
+    },
+    newArrivals: {
+      badge: "Just Dropped",
+      title: "Latest Styles",
+      subtitle: "Fresh pairs added weekly directly from our TikTok catalog — be the first to own them.",
+      cta: "View All Arrivals",
+      trendingBadgePrefix: "Trending in" 
+    },
+    bestSellers: {
+      badge: "Customer Favorites",
+      title: "BEST SELLERS",
+      subtitle: "Highly reviewed and loved by shoe lovers in Nakuru and across Kenya.",
+      cta: "View All Favorites"
+    },
+    whyUs: {
+      badge: "Trust & Reliability",
+      titleTop: "WHY SHOP WITH",
+      subtitle: "We offer top-tier design curation, reliable sizing guidance, and an easy localized shopping experience."
+    },
+    reviews: {
+      badge: "Real Feedback from TikTok & WhatsApp",
+      titleTop: "WHAT OUR",
+      titleBottom: "CUSTOMERS SAY"
+    },
+    whatsappCta: {
+      badge: "We Are Active",
+      titleTop: "START YOUR",
+      titleBottom: "ORDER NOW",
+      subtitle: "Chat with Esther directly on WhatsApp to secure your size and confirm store pickup or delivery details."
+    }
   },
   whatsappNumber: "254745343781",
   whatsappMessage: {
     general:
-      "Hello Creme Kicks,\n\nI would like to order:\n\nSize:\nQuantity:\nDelivery Location:\n\nPlease confirm availability and total price.\n\nThank you.",
+      "Hello Creme Kicks,\n\n\n\nI would like to place an order.\n\nShoe Screenshot/Name:\n\nShoe Size:\nPreferred Colour:\n\nDelivery/Pickup Location:\n\nPlease confirm availability.\n\nThank you.",
   },
   socialLinks: {
     tiktok: "https://www.tiktok.com/@cremekicksbywambo",
